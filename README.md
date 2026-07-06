@@ -69,8 +69,6 @@ If you see an error like `'javac' is not recognized`, Java JDK is not on your PA
 abcdefghijklmnopqrstuvwxyz123456
 ```
 
-![Extension ID location](https://i.imgur.com/placeholder.png)
-
 > The Extension ID is shown directly below the extension name and description in the card.
 
 ---
