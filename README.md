@@ -37,7 +37,7 @@ chrome-plugin/
 
 ### Step 1 — Build the Java native host
 
-Open `native-host\` in File Explorer and double-click **`build.bat`**, or run it in a terminal:
+Open `native-host\` in File Explorer and run **`build.bat`** as Administrator, or run it in a terminal:
 
 ```cmd
 cd native-host
