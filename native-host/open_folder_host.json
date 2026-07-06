@@ -1,9 +1,9 @@
 {
   "name": "com.example.open_folder",
   "description": "Opens a Windows folder in Explorer",
-  "path": "PLACEHOLDER_PATH",
+  "path": "D:\\AI_CODING\\chrome-plugin\\native-host\\open_folder_host.bat",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://PLACEHOLDER_EXTENSION_ID/"
+    "chrome-extension://eemodidcoodmkplpfnenkfnlmkdiiojo/"
   ]
 }

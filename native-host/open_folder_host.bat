@@ -1,2 +1,2 @@
 @echo off
-python "%~dp0open_folder_host.py"
+java -jar "%~dp0NativeHost.jar" 2>>"%~dp0native_host.log"
