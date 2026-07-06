@@ -7,13 +7,26 @@ import java.nio.charset.StandardCharsets;
 
 public class NativeHost {
 
+    // Raw stdin/stdout captured BEFORE we redirect System.out/System.err.
+    // All Native Messaging framing goes through these, so nothing else the JVM
+    // or Swing might print can ever corrupt Chrome's pipe.
+    private static InputStream  chromeIn;
+    private static OutputStream chromeOut;
+
     public static void main(String[] args) {
-        redirectStderr();
+        // Capture the real OS-level stdin/stdout (fd 0 and fd 1) first.
+        chromeIn  = new FileInputStream(FileDescriptor.in);
+        chromeOut = new FileOutputStream(FileDescriptor.out);
+
+        // Route every other stream to the log file. After this point a stray
+        // System.out.println or a JVM/Swing warning can never reach Chrome.
+        redirectStandardStreams();
+
         try {
             String message = readMessage();
             if (message == null) {
                 sendMessage(error("No message received"));
-                return;
+                halt(0);
             }
             String action = extractString(message, "action");
             if (action == null) action = "open";
@@ -26,6 +39,15 @@ public class NativeHost {
         } catch (Exception e) {
             try { sendMessage(error(e.getMessage())); } catch (Exception ignored) {}
         }
+        // halt() terminates immediately without running AWT/Swing shutdown
+        // hooks, which can otherwise deadlock and leave the process (and
+        // Chrome's pipe handle) alive.
+        halt(0);
+    }
+
+    private static void halt(int code) {
+        try { chromeOut.flush(); } catch (Exception ignored) {}
+        Runtime.getRuntime().halt(code);
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────
@@ -79,19 +101,19 @@ public class NativeHost {
     // ── Native Messaging protocol (4-byte LE length prefix) ──────────────────
 
     private static String readMessage() throws IOException {
-        byte[] lenBytes = System.in.readNBytes(4);
+        byte[] lenBytes = chromeIn.readNBytes(4);
         if (lenBytes.length < 4) return null;
         int length = ByteBuffer.wrap(lenBytes).order(ByteOrder.nativeOrder()).getInt();
-        byte[] data = System.in.readNBytes(length);
+        byte[] data = chromeIn.readNBytes(length);
         return new String(data, StandardCharsets.UTF_8);
     }
 
     private static void sendMessage(String json) throws IOException {
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
         byte[] len  = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(data.length).array();
-        System.out.write(len);
-        System.out.write(data);
-        System.out.flush();
+        chromeOut.write(len);
+        chromeOut.write(data);
+        chromeOut.flush();
     }
 
     // ── Minimal JSON helpers (no external deps) ───────────────────────────────
@@ -135,14 +157,16 @@ public class NativeHost {
         return "{\"success\":false,\"message\":\"" + escapeJson(msg == null ? "unknown" : msg) + "\"}";
     }
 
-    // ── Redirect stderr so JVM warnings never corrupt Chrome's pipe ───────────
+    // ── Route System.out/System.err to a log so they never hit Chrome's pipe ──
 
-    private static void redirectStderr() {
+    private static void redirectStandardStreams() {
         try {
             String jar = NativeHost.class.getProtectionDomain()
                 .getCodeSource().getLocation().toURI().getPath();
             File log = new File(new File(jar).getParent(), "native_host.log");
-            System.setErr(new PrintStream(new FileOutputStream(log, true)));
+            PrintStream logStream = new PrintStream(new FileOutputStream(log, true), true);
+            System.setOut(logStream);
+            System.setErr(logStream);
         } catch (Exception ignored) {}
     }
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist)",
+      "Bash(javac NativeHost.java)",
+      "Bash(jar cfe *)"
+    ]
+  }
+}
